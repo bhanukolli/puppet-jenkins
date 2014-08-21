@@ -76,6 +76,7 @@ class jenkins(
   $service_ensure     = $jenkins::params::service_ensure,
   $config_hash        = {},
   $plugin_hash        = {},
+  $job_hash           = {},
   $configure_firewall = undef,
   $install_java       = $jenkins::params::install_java,
   $proxy_host         = undef,
@@ -103,11 +104,13 @@ class jenkins(
     class {'jenkins::repo':}
   }
 
-  class {'jenkins::package': }
+  class { 'jenkins::package': }
 
   class { 'jenkins::config': }
 
   class { 'jenkins::plugins': }
+
+  class { 'jenkins::jobs': }
 
   if $proxy_host and $proxy_port {
     class { 'jenkins::proxy':
@@ -125,16 +128,26 @@ class jenkins(
       class {'jenkins::firewall':}
     }
   }
+
   if $cli {
-    class {'jenkins::cli':}
+    include jenkins::cli
   }
 
   Anchor['jenkins::begin'] ->
     Class['jenkins::package'] ->
       Class['jenkins::config'] ->
-        Class['jenkins::plugins']~>
+        Class['jenkins::plugins'] ~>
           Class['jenkins::service'] ->
+            Class['jenkins::jobs'] ->
               Anchor['jenkins::end']
+
+  if $cli {
+    Anchor['jenkins::begin'] ->
+      Class['jenkins::service'] ->
+        Class['jenkins::cli'] ->
+          Class['jenkins::jobs'] ->
+            Anchor['jenkins::end']
+  }
 
   if $install_java {
     Anchor['jenkins::begin'] ->
