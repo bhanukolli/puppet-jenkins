@@ -103,6 +103,7 @@ class jenkins(
   if $repo {
     class {'jenkins::repo':}
   }
+#To-Do Convert to Tomcat installation  
 
   class { 'jenkins::package': }
 
