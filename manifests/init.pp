@@ -2,6 +2,7 @@
 
 # version = 'installed' (Default)
 #   Will NOT update jenkins to the most recent version.
+#
 # version = 'latest'
 #    Will automatically update the version of jenkins to the current version available via your package manager.
 #
@@ -19,8 +20,14 @@
 #   this module.
 #   This is for folks that use a custom repo, or the like.
 #
+# service_enable = true (default)
+#   Enable (or not) the jenkins service
+#
+# service_ensure = 'running' (default)
+#   Status of the jenkins service.  running, stopped
+#
 # config_hash = undef (Default)
-# Hash with config options to set in sysconfig/jenkins defaults/jenkins
+#   Hash with config options to set in sysconfig/jenkins defaults/jenkins
 #
 # Example use
 #
@@ -37,7 +44,7 @@
 #
 # class{ 'jenkins::plugins':
 #   plugin_hash => {
-#     'git' -> { version => '1.1.1' },
+#     'git' => { version => '1.1.1' },
 #     'parameterized-trigger' => {},
 #     'multiple-scms' => {},
 #     'git-client' => {},
@@ -68,6 +75,18 @@
 #   - use puppetlabs-java module to install the correct version of a JDK.
 #   - Jenkins requires a JRE
 #
+#
+# cli = false (default)
+#   - force installation of the jenkins CLI jar to $libdir/cli/jenkins-cli.jar
+#   - the cli is automatically installed when needed by components that use it,
+#     such as the user and credentials types, and the security class
+#   - CLI installation (both implicit and explicit) requires the unzip command
+#
+#
+# proxy_host = undef (default)
+# proxy_port = undef (default)
+#   If your environment requires a proxy host to download plugins it can be configured here
+#
 class jenkins(
   $version            = $jenkins::params::version,
   $lts                = $jenkins::params::lts,
@@ -82,6 +101,7 @@ class jenkins(
   $proxy_host         = undef,
   $proxy_port         = undef,
   $cli                = undef,
+  $libdir             = $jenkins::params::libdir,
 ) inherits jenkins::params {
 
   validate_bool($lts, $install_java, $repo)
@@ -101,15 +121,13 @@ class jenkins(
   }
 
   if $repo {
-    class {'jenkins::repo':}
+    include jenkins::repo
   }
 #To-Do Convert to Tomcat installation  
 
-  class { 'jenkins::package': }
-
-  class { 'jenkins::config': }
-
-  class { 'jenkins::plugins': }
+  include jenkins::package
+  include jenkins::config
+  include jenkins::plugins
 
   class { 'jenkins::jobs': }
 
@@ -120,13 +138,13 @@ class jenkins(
     }
   }
 
-  class {'jenkins::service':}
+  include jenkins::service
 
   if defined('::firewall') {
     if $configure_firewall == undef {
       fail('The firewall module is included in your manifests, please configure $configure_firewall in the jenkins module')
     } elsif $configure_firewall {
-      class {'jenkins::firewall':}
+      include jenkins::firewall
     }
   }
 
